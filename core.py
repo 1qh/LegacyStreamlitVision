@@ -98,7 +98,7 @@ def filter_by_keys(d: dict, place: DeltaGenerator, text: str) -> list[int | str]
     a = list(d.keys())
 
     if place.checkbox(text):
-        return [i for i in place.multiselect(' ', a, label_visibility='collapsed')]
+        return list(place.multiselect(' ', a, label_visibility='collapsed'))
     else:
         return a
 
@@ -172,9 +172,8 @@ class Draw:
 
     def __str__(self) -> str:
         s = ''
-        l = len(self.lines)
         z = len(self.zones)
-        if l:
+        if l := len(self.lines):
             s += '\n - ' + plur(l, 'line')
         if z:
             s += '\n - ' + plur(z, 'zone')
@@ -248,7 +247,7 @@ class Model:
                 self.model = NAS(path)
                 self.names = self.model.model.names
             case _:
-                self.model = YOLO(path) if not self.legacy else yolov5.load(path)
+                self.model = yolov5.load(path) if self.legacy else YOLO(path)
                 self.names = self.model.names
 
         if self.legacy:
@@ -269,7 +268,6 @@ class Model:
                 classes=self.classes,
                 conf=self.conf,
                 iou=self.iou,
-                half=True,
                 retina_masks=True,
             )
             if self.tracker is None
@@ -279,7 +277,6 @@ class Model:
                 classes=self.classes,
                 conf=self.conf,
                 iou=self.iou,
-                half=True,
                 retina_masks=True,
                 tracker=f'{self.tracker}.yaml',
                 persist=True,
@@ -314,7 +311,6 @@ class Model:
             classes=self.classes,
             conf=self.conf,
             iou=self.iou,
-            half=True,
             retina_masks=True,
         )[0]
         if res.boxes is not None:
@@ -371,7 +367,7 @@ class Model:
                 size = (
                     c2.selectbox(
                         'Size',
-                        sizes if not is_nas else sizes[1:4],
+                        sizes[1:4] if is_nas else sizes,
                         label_visibility='collapsed',
                     )
                     if has_sizes and not custom
@@ -389,7 +385,7 @@ class Model:
                 if custom:
                     path = c2.selectbox(' ', glob('*.pt'), label_visibility='collapsed')
                 else:
-                    v = ver[:2] if not is_nas else '_nas_'
+                    v = '_nas_' if is_nas else ver[:2]
                     s = size if has_sizes else ''
                     t = suffix[task] if has_tasks else ''
                     u = ver[2] if len(ver) > 2 and ver[2] == 'u' else ''
@@ -461,23 +457,22 @@ class Model:
 
 
 class ColorClassifier:
-    def __init__(
-        self,
-        d: dict = {
-            'red': [255, 0, 0],
-            'orange': [255, 100, 0],
-            'yellow': [255, 200, 0],
-            'green': [0, 150, 0],
-            'blue': [0, 100, 255],
-            'purple': [100, 0, 255],
-            'black': [0, 0, 0],
-            'white': [255, 255, 255],
-        },
-    ):
+    def __init__(self, d: dict = None):
+        if d is None:
+            d = {
+                'red': [255, 0, 0],
+                'orange': [255, 100, 0],
+                'yellow': [255, 200, 0],
+                'green': [0, 150, 0],
+                'blue': [0, 100, 255],
+                'purple': [100, 0, 255],
+                'black': [0, 0, 0],
+                'white': [255, 255, 255],
+            }
         self.d = d
         self.names = list(d.keys())
 
-        if len(self.names) > 0:
+        if self.names:
             rgb_mat = np.array(list(d.values())).astype(np.uint8)
             self.ycc = rgb2ycc(rgb_mat)
             self.rgb = [tuple(map(int, i)) for i in rgb_mat]
@@ -811,12 +806,15 @@ class Annotator:
         if canvas.json_data is not None:
             draw = Draw.from_canvas(canvas.json_data['objects'])
             c2.markdown(draw)
-        if canvas.image_data is not None and len(draw) > 0:
-            if c1.button('Export canvas image'):
-                Image.alpha_composite(
-                    bg.convert('RGBA'),
-                    Image.fromarray(canvas.image_data),
-                ).save('canvas.png')
+        if (
+            canvas.image_data is not None
+            and len(draw) > 0
+            and c1.button('Export canvas image')
+        ):
+            Image.alpha_composite(
+                bg.convert('RGBA'),
+                Image.fromarray(canvas.image_data),
+            ).save('canvas.png')
 
         ex1 = sb.expander('Toggle')
         ex2 = sb.expander('Colors')
