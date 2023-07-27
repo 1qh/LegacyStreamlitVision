@@ -142,7 +142,7 @@ def first_frame(path: str) -> Image.Image:
     return frame
 
 
-@dataclass
+@dataclass(slots=True)
 class Toggle:
     fps: bool = True
     count: bool = True
@@ -154,7 +154,7 @@ class Toggle:
     trail: bool = True
 
 
-@dataclass
+@dataclass(slots=True)
 class Tweak:
     trail_length: int = 24
     mask_opacity: float = 0.5
@@ -165,7 +165,7 @@ class Tweak:
     text_color: str = '#000000'
 
 
-@dataclass
+@dataclass(slots=True)
 class Draw:
     lines: list = field(default_factory=list)
     zones: list = field(default_factory=list)
@@ -210,7 +210,7 @@ class Draw:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class ModelInfo:
     path: str = 'yolov8n.pt'
     classes: list[int] = field(default_factory=list)
@@ -222,6 +222,17 @@ class ModelInfo:
 
 
 class Model:
+    __slots__ = (
+        'classes',
+        'conf',
+        'iou',
+        'legacy',
+        'model',
+        'names',
+        'tracker',
+        'info',
+    )
+
     def __init__(
         self,
         info: ModelInfo = ModelInfo(),
@@ -457,6 +468,8 @@ class Model:
 
 
 class ColorClassifier:
+    __slots__ = ('d', 'names', 'ycc', 'rgb')
+
     def __init__(self, d: dict = None):
         if d is None:
             d = {
@@ -487,6 +500,26 @@ class ColorClassifier:
 
 
 class Annotator:
+    __slots__ = (
+        'model',
+        'reso',
+        'draw',
+        'toggle',
+        'tweak',
+        'color_clf',
+        'unneeded',
+        'ls',
+        'zs',
+        'text_color',
+        'line',
+        'box',
+        'zones',
+        'mask',
+        'pallet',
+        'ques',
+        'trail_colors',
+    )
+
     def __init__(
         self,
         model: Model,
