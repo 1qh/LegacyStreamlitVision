@@ -2,7 +2,6 @@ import json
 import os
 import time
 from collections import deque
-from dataclasses import asdict, dataclass, field
 from glob import glob
 from pathlib import Path
 from subprocess import check_output
@@ -12,7 +11,7 @@ import cv2
 import numpy as np
 import streamlit as st
 import yolov5
-from dacite import from_dict
+from attrs import asdict, define
 from PIL import Image
 from streamlit import sidebar as sb
 from streamlit.delta_generator import DeltaGenerator
@@ -142,7 +141,7 @@ def first_frame(path: str) -> Image.Image:
     return frame
 
 
-@dataclass(slots=True)
+@define
 class Toggle:
     fps: bool = True
     count: bool = True
@@ -154,7 +153,7 @@ class Toggle:
     trail: bool = True
 
 
-@dataclass(slots=True)
+@define
 class Tweak:
     trail_length: int = 24
     mask_opacity: float = 0.5
@@ -165,10 +164,10 @@ class Tweak:
     text_color: str = '#000000'
 
 
-@dataclass(slots=True)
+@define
 class Draw:
-    lines: list = field(default_factory=list)
-    zones: list = field(default_factory=list)
+    lines: list = []
+    zones: list = []
 
     def __str__(self) -> str:
         s = ''
@@ -210,10 +209,10 @@ class Draw:
         )
 
 
-@dataclass(slots=True)
+@define
 class ModelInfo:
     path: str = 'yolov8n.pt'
-    classes: list[int] = field(default_factory=list)
+    classes: list[int] = []
     ver: str = 'v8'
     task: str = 'detect'
     conf: float = 0.25
@@ -591,11 +590,11 @@ class Annotator:
     def load(cls, path: str, reso: tuple[int, int]):
         d = json.load(open(path))
         return cls(
-            model=Model(from_dict(ModelInfo, d['model'])),
+            model=Model(ModelInfo(**d['model'])),
             reso=reso,
-            toggle=from_dict(Toggle, d['toggle']),
-            tweak=from_dict(Tweak, d['tweak']),
-            draw=from_dict(Draw, d['draw']),
+            toggle=Toggle(**d['toggle']),
+            tweak=Tweak(**d['tweak']),
+            draw=Draw(**d['draw']),
             color_clf=ColorClassifier(d['color']),
         )
 
