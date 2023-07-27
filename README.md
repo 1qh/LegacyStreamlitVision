@@ -4,9 +4,9 @@
 
 #### Local environment
 
-<details><summary>(For non-GPU users)</summary>
+<details><summary>Note</summary>
 
--   Install CPU version of PyTorch first
+-   For non-GPU users, please install CPU version of PyTorch first
 
 ```
 pip install -i https://download.pytorch.org/whl/cpu torch torchvision
