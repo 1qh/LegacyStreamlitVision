@@ -295,13 +295,10 @@ class Model:
 
     def from_res(self, res) -> tuple[Detections, np.ndarray]:
         if self.legacy:
-            return Detections.from_yolov5(res[1]), res[0]
+            return Detections.from_yolov5(res[1]), np.zeros((1, 1, 3))
 
         if res.boxes is not None:
-            det = Detections.from_yolov8(res)
-            if res.boxes.id is not None:
-                det.tracker_id = res.boxes.id.cpu().numpy().astype(int)
-            return det, cvt(res.plot())
+            return Detections.from_ultralytics(res), cvt(res.plot())
 
         return Detections.empty(), cvt(res.plot())
 
@@ -313,20 +310,17 @@ class Model:
             start = time.time()
 
     def from_frame(self, f: np.ndarray) -> tuple[Detections, np.ndarray]:
-        if self.legacy:
-            return Detections.from_yolov5(self.model(f)), np.zeros((1, 1, 3))
-
-        res = self.model.predict(
-            f,
-            classes=self.classes,
-            conf=self.conf,
-            iou=self.iou,
-            retina_masks=True,
-        )[0]
-        if res.boxes is not None:
-            return Detections.from_yolov8(res), cvt(res.plot())
-
-        return Detections.empty(), cvt(res.plot())
+        return self.from_res(
+            (None, self.model(f))
+            if self.legacy
+            else self.model.predict(
+                f,
+                classes=self.classes,
+                conf=self.conf,
+                iou=self.iou,
+                retina_masks=True,
+            )[0]
+        )
 
     def predict_image(self, file: str | bytes | Path):
         f = np.array(Image.open(file))
