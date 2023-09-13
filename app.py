@@ -92,7 +92,7 @@ def prepare(path: str, place):
     vid = VideoInfo.from_video_path(path)
 
     if which('ffmpeg'):
-        if place.checkbox('Trim'):
+        if place.toggle('Trim'):
             length = int(vid.total_frames / vid.fps)
             begin, end = place.slider(
                 ' ',
@@ -113,8 +113,8 @@ def prepare(path: str, place):
 def main(state):
     st_config()
     file = sb.file_uploader(' ', label_visibility='collapsed')
-    running = sb.checkbox('Realtime inference (slower than native)')
-    usecam = sb.checkbox('Use camera')
+    running = sb.toggle('Realtime inference (slower than native)')
+    usecam = sb.toggle('Use camera')
     mt = st.empty()
 
     if usecam:

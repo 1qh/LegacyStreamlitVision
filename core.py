@@ -28,7 +28,7 @@ from supervision import (
     PolygonZone,
     PolygonZoneAnnotator,
     VideoInfo,
-    crop,
+    crop_image,
     draw_text,
     get_polygon_center,
 )
@@ -85,7 +85,7 @@ def avg_rgb(f: np.ndarray) -> np.ndarray:
 def filter_by_vals(d: dict, place: DeltaGenerator, text: str) -> list[int | str]:
     a = list(d.values())
 
-    if place.checkbox(text):
+    if place.toggle(text):
         return [
             a.index(i) for i in place.multiselect(' ', a, label_visibility='collapsed')
         ]
@@ -96,7 +96,7 @@ def filter_by_vals(d: dict, place: DeltaGenerator, text: str) -> list[int | str]
 def filter_by_keys(d: dict, place: DeltaGenerator, text: str) -> list[int | str]:
     a = list(d.keys())
 
-    if place.checkbox(text):
+    if place.toggle(text):
         return list(place.multiselect(' ', a, label_visibility='collapsed'))
     else:
         return a
@@ -353,7 +353,7 @@ class Model:
                     'Classify': '-cls',
                     'Pose': '-pose',
                 }
-                custom = ex.checkbox('Custom weight')
+                custom = ex.toggle('Custom weight')
                 c1, c2 = ex.columns(2)
                 c3, c4 = ex.columns(2)
 
@@ -649,7 +649,7 @@ class Annotator:
                 #     bb[0] + int(w * 0.2) : bb[2] - int(w * 0.2),
                 # ]
 
-                cropped = crop(f, bb)
+                cropped = crop_image(f, bb)
                 if cropped.shape[0] == 0 or cropped.shape[1] == 0:
                     continue
 
@@ -792,19 +792,19 @@ class Annotator:
         else:
             ex = sb.expander('For camera', expanded=True)
             reso = maxcam()
-            if ex.checkbox('Custom resolution', value=True):
+            if ex.toggle('Custom resolution', value=True):
                 c1, c2 = ex.columns(2)
                 reso = (
                     c1.number_input('Width', 1, 7680, 640, 1),
                     c2.number_input('Height', 1, 4320, 480, 1),
                 )
             background = None
-            if ex.checkbox('Annotate from image'):
-                if ex.checkbox('Upload'):
+            if ex.toggle('Annotate from image'):
+                if ex.toggle('Upload'):
                     background = ex.file_uploader(
                         ' ', label_visibility='collapsed', key='u'
                     )
-                if ex.checkbox('Shoot'):
+                if ex.toggle('Shoot'):
                     background = st.camera_input('Shoot')
             if background:
                 model.predict_image(background)
@@ -824,7 +824,7 @@ class Annotator:
             else ('rect', 'polygon'),
             label_visibility='collapsed',
         )
-        bg = background if c2.checkbox('Background', value=True) else None
+        bg = background if c2.toggle('Background', value=True) else None
         stroke, key = ('#fff', 'e') if bg is None else ('#000', 'f')
         canvas = mycanvas(stroke, width, height, mode, bg, key)
 
@@ -850,14 +850,14 @@ class Annotator:
         c5, c6 = ex1.columns(2)
         c7, c8 = ex1.columns(2)
 
-        fps = c1.checkbox('FPS', value=True)
-        count = c2.checkbox('Count', value=True) if len(names) else False
-        box = c3.checkbox('Box', value=True)
-        label = c4.checkbox('Label', value=True) if box else False
-        area = c5.checkbox('Area', value=True)
-        color = c6.checkbox('Color classify')
-        trail = c7.checkbox('Trail', value=True) if is_track else False
-        mask = c8.checkbox('Mask', value=True) if task == 'segment' else False
+        fps = c1.toggle('FPS', value=True)
+        count = c2.toggle('Count', value=True) if len(names) else False
+        box = c3.toggle('Box', value=True)
+        label = c4.toggle('Label', value=True) if box else False
+        area = c5.toggle('Area', value=True)
+        color = c6.toggle('Color classify')
+        trail = c7.toggle('Trail', value=True) if is_track else False
+        mask = c8.toggle('Mask', value=True) if task == 'segment' else False
 
         toggle = Toggle(
             fps=fps,
