@@ -7,11 +7,11 @@
 *.pt
 *.pth
 *.engine
+*_*
 .wip
 config.json
 _*.py
 runs/
-.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
