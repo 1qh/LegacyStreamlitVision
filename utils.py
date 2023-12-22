@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import streamlit as st
 from attrs import asdict, define
+from cv2 import getOptimalNewCameraMatrix, undistort
 from numpy import ndarray
 from PIL import Image
 from streamlit import set_page_config
@@ -35,6 +36,38 @@ color_dict = {
 }
 
 base_colors = ['black', 'white']
+camera_matrix = np.load('fisheye/camera_matrix.npy')
+dist_coeffs = np.load('fisheye/dist_coeffs.npy')
+
+
+class FisheyeRemoval:
+  def __init__(self, reso: tuple[int, int] = (640, 480)):
+    w, h = reso
+    s = min(w, h)
+    d = abs(w - h) // 2
+    self.camera_matrix = camera_matrix
+    self.dist_coeffs = dist_coeffs
+    self.new_camera_matrix, roi = getOptimalNewCameraMatrix(
+      camera_matrix, dist_coeffs, (s, s), 1, (s, s)
+    )
+    right, top, new_w, new_h = roi
+    bottom = top + new_h
+    left = right + new_w
+    self.crop = slice(top, bottom), slice(right, left)
+    self.slic = (
+      (slice(None), slice(None))
+      if w == h
+      else ((slice(None), slice(d, d + h)) if w > h else (slice(d, d + w), slice(None)))
+    )
+
+  def __call__(self, f: ndarray) -> ndarray:
+    return undistort(
+      f[self.slic],
+      self.camera_matrix,
+      self.dist_coeffs,
+      None,
+      self.new_camera_matrix,
+    )[self.crop]
 
 
 class ColorClassifier:
@@ -325,7 +358,7 @@ def to_plain(ori: dict):
           v[k2] = asdict(v2)
 
   for k, v in d.items():
-    d[k] = {k2: v2 for k2, v2 in v.items() if v2}
+    d[k] = {k2: v2 for k2, v2 in v.items() if v2 is not None}
 
   return d
 

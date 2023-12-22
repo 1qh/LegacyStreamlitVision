@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import cv2
+from cv2 import destroyAllWindows, imshow, waitKey
 from typer import run
 from vidgear.gears import WriteGear
 
@@ -14,8 +14,8 @@ def app(source=0, config='config.json', saveto=None):
 
   if saveto is None:
     for f, _ in gen:
-      cv2.imshow('', f)
-      if cv2.waitKey(1) & 0xFF == ord('q'):
+      imshow('', f)
+      if waitKey(1) & 0xFF == ord('q'):
         break
   else:
     writer = WriteGear(output=saveto)
@@ -23,7 +23,7 @@ def app(source=0, config='config.json', saveto=None):
       writer.write(f)
     writer.close()
 
-  cv2.destroyAllWindows()
+  destroyAllWindows()
 
 
 if __name__ == '__main__':

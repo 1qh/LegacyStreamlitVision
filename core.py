@@ -81,6 +81,7 @@ all_anns = {
 all_class = {i.__name__[:-9]: i for i in all_anns}
 all_names = list(all_class.keys())
 all_default = {}
+
 for i in all_names:
   sig = {}
   for j in signature(all_class[i]).parameters.items():
@@ -124,14 +125,8 @@ class Annotator:
 
     if 'LineAndZone' in anns:
       self.linezone: LineAndZoneAnnotator = anns['LineAndZone']
-      # del anns['LineAndZone']
 
     self.anns = anns
-
-  def __dict__(self):
-    return {
-      'model': asdict(self.model.info),
-    }
 
   @classmethod
   def load(cls, path: str):

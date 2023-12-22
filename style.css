@@ -1,4 +1,4 @@
-div[data-testid="stExpander"] div[role="button"] p {
+div[data-testid='stExpander'] div[role='button'] p {
   font-size: 1.5rem;
 }
 div.stButton button {
@@ -12,12 +12,12 @@ footer {
   visibility: hidden;
 }
 @font-face {
-  font-family: "SF Pro Display";
+  font-family: 'SF Pro';
 }
 html,
 body,
-[class*="css"] {
-  font-family: "SF Pro Display";
+[class*='css'] {
+  font-family: 'SF Pro';
 }
 thead tr th:first-child {
   display: none;

@@ -1,9 +1,9 @@
 from pathlib import Path
 from shutil import which
 
-import cv2
 import streamlit as st
 from av import VideoFrame
+from cv2 import VideoCapture, VideoWriter_fourcc
 from lightning.app import LightningApp, LightningFlow
 from lightning.app.frontend import StreamlitFrontend
 from psutil import process_iter
@@ -11,10 +11,11 @@ from streamlit import session_state
 from streamlit import sidebar as sb
 from streamlit_webrtc import webrtc_streamer
 from supervision import VideoInfo
+from vidgear.gears import VideoGear, WriteGear
 
 from core import Annotator
 from model import Model
-from utils import cvt, hms, maxcam, st_config, trim_vid
+from utils import FisheyeRemoval, cvt, hms, maxcam, st_config, trim_vid
 
 _shape = None
 
@@ -49,16 +50,23 @@ def main(state):
   file = sb.file_uploader(' ', label_visibility='collapsed')
   running = sb.toggle('Realtime inference', help='Slower than native')
   usecam = sb.toggle('Use camera')
+
+  ex = sb.expander('Experimental Features')
+  fisheye = ex.toggle('Fisheye Flatten')
+
   mt = st.empty()
 
   if usecam:
     file = None
 
     an = Annotator.ui(0)
-    width, height = maxcam()
+    reso = maxcam()
+    unfish = FisheyeRemoval(reso)
 
-    cap = cv2.VideoCapture(0)
-    codec = cv2.VideoWriter_fourcc(*'MJPG')
+    width, height = reso
+
+    cap = VideoCapture(0)
+    codec = VideoWriter_fourcc(*'MJPG')
     cap.set(6, codec)
     cap.set(5, 30)
     cap.set(3, width)
@@ -70,6 +78,7 @@ def main(state):
         t1, t2 = t2, t1
       success, f = cap.read()
       if success:
+        f = unfish(f) if fisheye else f
         f, fallback = an.from_frame(f)
         t1.image(cvt(f))
         t2.image(fallback)
@@ -90,11 +99,13 @@ def main(state):
       )
 
     def simplecam(frame):
+      f = unfish(f) if fisheye else f
       f = an.from_frame(frame.to_ndarray(format='bgr24'))[1]
       return VideoFrame.from_ndarray(f)
 
     # oh my god, it took me so long to realize the frame bigger through time
     def cam(frame):
+      f = unfish(f) if fisheye else f
       f = frame.to_ndarray(format='bgr24')
       global _shape
       if f.shape != _shape:
@@ -117,8 +128,21 @@ def main(state):
     elif 'video' in file.type:
       ex.video(file)
       path = f'up_{file.name}'
+
       with open(path, 'wb') as up:
         up.write(file.read())
+
+      if fisheye:
+        new = f'unfished_{file.name}'
+        if not Path(new).exists():
+          unfish = FisheyeRemoval(VideoInfo.from_video_path(path).resolution_wh)
+          stream = VideoGear(source=path).start()
+          writer = WriteGear(new)
+          while (f := stream.read()) is not None:
+            writer.write(unfish(f))
+          stream.stop()
+          writer.close()
+        path = new
 
       prepare(path, ex)
       path = session_state['path']
