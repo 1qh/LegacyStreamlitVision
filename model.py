@@ -11,9 +11,30 @@ from PIL import Image
 from streamlit import sidebar as sb
 from supervision import BoxAnnotator, Detections
 from ultralytics import NAS, RTDETR, SAM, YOLO
+from ultralytics.engine.results import Boxes, Results
 from vidgear.gears import VideoGear
 
-from utils import cvt, filter_by_vals, legacy_generator
+from utils import cvt, filter_by_vals
+
+
+class LegacyYoloV5:
+  def __init__(
+    self,
+    source: str | int,
+    classes: list[int],
+    conf: float,
+    iou: float,
+  ):
+    self.model = yolov5.load(source)
+    self.model.classes = classes
+    self.model.conf = conf
+    self.model.iou = iou
+
+  def __call__(self, f: ndarray) -> list[Results]:
+    res = Results(orig_img=f, path=None, names=self.model.names)
+    pred = self.model(f).pred[0]
+    res.boxes = Boxes(pred, f.shape)
+    return [res]
 
 
 @define
@@ -36,6 +57,8 @@ class Model:
     'legacy',
     'model',
     'names',
+    'options',
+    'preprocessors',
     'task',
     'tracker',
   )
@@ -44,95 +67,74 @@ class Model:
     self,
     info: ModelInfo = ModelInfo(),
   ):
-    self.classes = info.classes
-    self.task = info.task
-    self.conf = info.conf
-    self.iou = info.iou
-    self.tracker = info.tracker
-
+    classes = info.classes
+    task = info.task
+    conf = info.conf
+    iou = info.iou
+    tracker = info.tracker
     path = info.path
     ver = info.ver
 
-    self.legacy = ver == 'v5'
-
+    options = {}
+    legacy = ver == 'v5'
     match ver:
       case 'sam':
-        self.model = SAM(path)
-        self.names = []
+        model = SAM(path)
+        names = []
       case 'rtdetr':
-        self.model = RTDETR(path)
-        self.names = []  # not available
+        model = RTDETR(path)
+        names = []  # not available
       case 'NAS':
-        self.model = NAS(path)
-        self.names = self.model.model.names
+        model = NAS(path)
+        names = model.model.names
       case _:
-        self.model = yolov5.load(path) if self.legacy else YOLO(path)
-        self.names = self.model.names
+        if legacy:
+          model = LegacyYoloV5(path, classes, conf, iou)
+          names = model.model.names
+          options = {}
+        else:
+          yolo = YOLO(path)
+          names = yolo.names
+          options = dict(
+            classes=classes,
+            conf=conf,
+            iou=iou,
+            retina_masks=True,
+          )
+          if tracker:
+            options.update(tracker=f'{tracker}.yaml', persist=True)
+          model = yolo.predict if tracker is None else yolo.track
 
-    if self.legacy:
-      self.model.classes = self.classes
-      self.model.conf = self.conf
-      self.model.iou = self.iou
-
+    self.names = names
+    self.task = task
+    self.tracker = tracker
     self.info = info
+    self.options = options
+    self.model = model
+    self.legacy = legacy
+    self.preprocessors: list[callable] = []
 
   def __call__(self, source: str | int) -> Generator:
-    if self.legacy:
-      stream = VideoGear(source=source).start()
-      return legacy_generator(stream, self.model)
-    return (
-      self.model.predict(
-        source,
-        stream=True,
-        classes=self.classes,
-        conf=self.conf,
-        iou=self.iou,
-        retina_masks=True,
-      )
-      if self.tracker is None
-      else self.model.track(
-        source,
-        stream=True,
-        classes=self.classes,
-        conf=self.conf,
-        iou=self.iou,
-        retina_masks=True,
-        tracker=f'{self.tracker}.yaml',
-        persist=True,
-      )
-    )
+    stream = VideoGear(source=source).start()
+    return self.gen(stream)
 
-  def from_res(self, res) -> tuple[Detections, ndarray]:
-    if self.legacy:
-      return Detections.from_yolov5(res[1]), np.zeros((1, 1, 3))
-
-    if res.boxes is not None:
-      return Detections.from_ultralytics(res), cvt(res.plot())
-
-    return Detections.empty(), cvt(res.plot())
-
-  def gen(self, source: str | int) -> Generator:
-    for res in self(source):
-      f = res[0] if self.legacy else res.orig_img
-      yield f, self.from_res(res)
+  def gen(self, stream: VideoGear) -> Generator:
+    while (f := stream.read()) is not None:
+      if self.preprocessors:
+        for p in self.preprocessors:
+          f = p(f)
+      yield f, self.from_frame(f)
 
   def from_frame(self, f: ndarray) -> tuple[Detections, ndarray]:
-    return self.from_res(
-      (None, self.model(f))
-      if self.legacy
-      else self.model.predict(
-        f,
-        classes=self.classes,
-        conf=self.conf,
-        iou=self.iou,
-        retina_masks=True,
-      )[0]
-    )
+    res = self.model(f, **self.options)[0]
+    det = Detections.from_ultralytics(res) if res.boxes is not None else Detections.empty()
+    fallback = np.zeros((1, 1, 3)) if self.legacy else cvt(res.plot())
+    return det, fallback
 
   def predict_image(self, file: str | bytes | Path):
     f = np.array(Image.open(file))
     if self.legacy:
-      det = Detections.from_yolov5(self.model(f))
+      det = Detections.from_ultralytics(self.model(f)[0])
       f = BoxAnnotator().annotate(
         scene=f,
         detections=det,

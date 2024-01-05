@@ -1,3 +1,4 @@
+from contextlib import suppress
 from pathlib import Path
 from shutil import which
 
@@ -6,16 +7,15 @@ from av import VideoFrame
 from cv2 import VideoCapture, VideoWriter_fourcc
 from lightning.app import LightningApp, LightningFlow
 from lightning.app.frontend import StreamlitFrontend
-from psutil import process_iter
+from psutil import ZombieProcess, process_iter
 from streamlit import session_state
 from streamlit import sidebar as sb
 from streamlit_webrtc import webrtc_streamer
 from supervision import VideoInfo
-from vidgear.gears import VideoGear, WriteGear
 
 from core import Annotator
 from model import Model
-from utils import FisheyeRemoval, cvt, hms, maxcam, st_config, trim_vid
+from utils import cvt, hms, maxcam, st_config, trim_vid
 
 _shape = None
 
@@ -51,9 +51,6 @@ def main(state):
   running = sb.toggle('Realtime inference', help='Slower than native')
   usecam = sb.toggle('Use camera')
 
-  ex = sb.expander('Experimental Features')
-  fisheye = ex.toggle('Fisheye Flatten')
-
   mt = st.empty()
 
   if usecam:
@@ -61,7 +58,6 @@ def main(state):
 
     an = Annotator.ui(0)
     reso = maxcam()
-    unfish = FisheyeRemoval(reso)
 
     width, height = reso
 
@@ -78,7 +74,6 @@ def main(state):
         t1, t2 = t2, t1
       success, f = cap.read()
       if success:
-        f = unfish(f) if fisheye else f
         f, fallback = an.from_frame(f)
         t1.image(cvt(f))
         t2.image(fallback)
@@ -99,25 +94,22 @@ def main(state):
       )
 
     def simplecam(frame):
-      f = unfish(f) if fisheye else f
-      f = an.from_frame(frame.to_ndarray(format='bgr24'))[1]
-      return VideoFrame.from_ndarray(f)
+      f = frame.to_ndarray(format='bgr24')
+      return VideoFrame.from_ndarray(an.from_frame(f)[1])
 
     # oh my god, it took me so long to realize the frame bigger through time
     def cam(frame):
-      f = unfish(f) if fisheye else f
       f = frame.to_ndarray(format='bgr24')
       global _shape
-      if f.shape != _shape:
+      if an.linezone and f.shape != _shape:
         _shape = f.shape
         an.linezone.update(f)
-      f = cvt(an.from_frame(f)[0])
-      return VideoFrame.from_ndarray(f)
+      return VideoFrame.from_ndarray(cvt(an.from_frame(f)[0]))
 
     if an.unneeded:
-      cam_stream('a', simplecam)
+      cam_stream('cp', simplecam)
     else:
-      cam_stream('b', cam)
+      cam_stream('ds', cam)
 
   if file:
     ex = sb.expander('Uploaded file')
@@ -131,18 +123,6 @@ def main(state):
 
       with open(path, 'wb') as up:
         up.write(file.read())
-
-      if fisheye:
-        new = f'unfished_{file.name}'
-        if not Path(new).exists():
-          unfish = FisheyeRemoval(VideoInfo.from_video_path(path).resolution_wh)
-          stream = VideoGear(source=path).start()
-          writer = WriteGear(new)
-          while (f := stream.read()) is not None:
-            writer.write(unfish(f))
-          stream.stop()
-          writer.close()
-        path = new
 
       prepare(path, ex)
       path = session_state['path']
@@ -164,13 +144,16 @@ def main(state):
 
       while running:
         for f, fallback in an.gen(path):
+          if count == total_frames:
+            running = False
+            break
           t1, t2 = mt.tabs(['Main', 'Fallback'])
           if an.unneeded:
             t1, t2 = t2, t1
           t1.image(cvt(f))
           t2.image(fallback)
-          count += 1
           t1.progress(count / total_frames)
+          count += 1
 
     else:
       sb.warning('Please upload image/video')
@@ -186,7 +169,12 @@ class App(LightningFlow):
 
 lit = LightningApp(App())
 
-running_apps = [i for i in [p.cmdline() for p in process_iter()] if 'run' in i]
+running_apps = []
+for p in process_iter():
+  with suppress(ZombieProcess):
+    running_apps.append(p.cmdline())
+
+running_apps = [i for i in running_apps if 'run' in i]
 this_process = next(p for p in running_apps if any(Path(__file__).stem in a for a in p))
 
 if 'app' not in this_process:

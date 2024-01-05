@@ -3,7 +3,6 @@ from copy import deepcopy
 from inspect import signature
 from subprocess import check_output
 from time import gmtime, strftime
-from typing import Generator
 
 import cv2
 import numpy as np
@@ -207,36 +206,35 @@ def st_config():
   except FileNotFoundError:
     st.markdown(
       """
-            <style>
-            div[data-testid="stExpander"] div[role="button"] p {
-              font-size: 1.5rem;
-            }
-            div.stButton button {
-              width: 100%;
-              border-radius: 20px;
-            }
-            div.block-container {
-              padding-top: 2rem;
-            }
-            footer {
-              visibility: hidden;
-            }
-            @font-face {
-              font-family: "SF Pro Display";
-            }
-            html,
-            body,
-            [class*="css"] {
-              font-family: "SF Pro Display";
-            }
-            thead tr th:first-child {
-              display: none;
-            }
-            tbody th {
-              display: none;
-            }
-            </style>
-            """
+div[data-testid='stExpander'] div[role='button'] p {
+  font-size: 1.5rem;
+}
+div.stButton button {
+  width: 100%;
+  border-radius: 20px;
+}
+div.block-container {
+  padding-top: 2rem;
+}
+footer {
+  visibility: hidden;
+}
+@font-face {
+  font-family: 'SF Pro';
+}
+html,
+body,
+[class*='css'] {
+  font-family: 'SF Pro';
+}
+thead tr th:first-child {
+  display: none;
+}
+tbody th {
+  display: none;
+}
+
+"""
     )
 
 
@@ -316,12 +314,6 @@ def canvas2draw(reso, background, is_track):
       Image.fromarray(canvas.image_data),
     ).save('canvas.png')
   return draw
-
-
-def legacy_generator(stream: VideoGear, model) -> Generator:
-  while True:
-    f = stream.read()
-    yield f, model(f)
 
 
 def first_frame(path: str) -> Image.Image:

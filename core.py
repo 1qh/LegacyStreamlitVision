@@ -42,6 +42,7 @@ from custom_annotator import (
 )
 from model import Model, ModelInfo
 from utils import (
+  FisheyeRemoval,
   canvas2draw,
   color_dict,
   exe_button,
@@ -123,6 +124,7 @@ class Annotator:
     else:
       self.trace = None
 
+    self.linezone = None
     if 'LineAndZone' in anns:
       self.linezone: LineAndZoneAnnotator = anns['LineAndZone']
 
@@ -162,11 +164,10 @@ class Annotator:
     return f
 
   def gen(self, source: str | int) -> Generator:
-    for f, out in self.model.gen(source):
-      det, fallback = out
+    for f, (det, fallback) in self.model(source):
       yield self(f, det), fallback
 
-  def from_frame(self, f: ndarray) -> ndarray:
+  def from_frame(self, f: ndarray) -> tuple[ndarray, ndarray]:
     det, fallback = self.model.from_frame(f)
     return self(f, det), fallback
 
@@ -196,6 +197,11 @@ class Annotator:
         model.predict_image(background)
         background = Image.open(background).resize(reso)
       ex.write('**Notes:** Track & line counts only work on native run')
+
+    ex0 = sb.expander('Experimental Features')
+    if ex0.toggle('Fisheye Flatten'):
+      unfish = FisheyeRemoval(reso)
+      model.preprocessors.append(unfish)
 
     names = model.names
     task = model.task
