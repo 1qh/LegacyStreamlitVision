@@ -16,6 +16,8 @@ from vidgear.gears import VideoGear
 
 from utils import cvt, filter_by_vals
 
+coconames = YOLO().names
+
 
 class LegacyYoloV5:
   def __init__(
@@ -77,33 +79,33 @@ class Model:
 
     options = {}
     legacy = ver == 'v5'
-    match ver:
-      case 'sam':
-        model = SAM(path)
-        names = []
-      case 'rtdetr':
-        model = RTDETR(path)
-        names = []  # not available
-      case 'NAS':
-        model = NAS(path)
-        names = model.model.names
-      case _:
-        if legacy:
-          model = LegacyYoloV5(path, classes, conf, iou)
+    options = dict(
+      classes=classes,
+      conf=conf,
+      iou=iou,
+      retina_masks=True,
+    )
+    if legacy:
+      model = LegacyYoloV5(path, classes, conf, iou)
+      names = model.model.names
+      options = {}
+    else:
+      if tracker:
+        options.update(tracker=f'{tracker}.yaml', persist=True)
+      match ver:
+        case 'sam':
+          model = SAM(path)
+          names = []
+        case 'rtdetr':
+          model = RTDETR(path)
+          names = coconames
+        case 'NAS':
+          model = NAS(path)
           names = model.model.names
-          options = {}
-        else:
-          yolo = YOLO(path)
-          names = yolo.names
-          options = dict(
-            classes=classes,
-            conf=conf,
-            iou=iou,
-            retina_masks=True,
-          )
-          if tracker:
-            options.update(tracker=f'{tracker}.yaml', persist=True)
-          model = yolo.predict if tracker is None else yolo.track
+        case _:
+          model = YOLO(path)
+          names = model.names
+      model = model.predict if tracker is None else model.track
 
     self.names = names
     self.task = task
@@ -128,7 +130,7 @@ class Model:
   def from_frame(self, f: ndarray) -> tuple[Detections, ndarray]:
     res = self.model(f, **self.options)[0]
     det = Detections.from_ultralytics(res) if res.boxes is not None else Detections.empty()
-    fallback = np.zeros((1, 1, 3)) if self.legacy else cvt(res.plot())
+    fallback = np.zeros((1, 1, 3)) if self.legacy else cvt(res.plot(line_width=1, kpt_radius=1))
     return det, fallback
 
   def predict_image(self, file: str | bytes | Path):
@@ -163,8 +165,7 @@ class Model:
           'Pose': '-pose',
         }
         custom = ex.toggle('Custom weight')
-        c1, c2 = ex.columns(2)
-        c3, c4 = ex.columns(2)
+        c1, c2, c3 = ex.columns([1, 2, 1] if custom else [2, 2, 3])
 
         ver = c1.selectbox(
           'Version',
@@ -219,18 +220,6 @@ class Model:
             task = model.overrides['task']
             path = model.ckpt_path
 
-            if track:
-              tracker = (
-                c4.selectbox(
-                  'Tracker',
-                  ['bytetrack', 'botsort', 'No track'],
-                  label_visibility='collapsed',
-                )
-                if task != 'classify'
-                else None
-              )
-              tracker = tracker if tracker != 'No track' else None
-
           if custom:
             c3.subheader(f'{task.capitalize()}')
 
@@ -243,12 +232,23 @@ class Model:
       case 'SAM':
         ver = 'sam'
         task = 'segment'
-        size = ex.selectbox('Size', ('b', 'l'))
-        path = f'{ver}_{size}.pt'
+        size = ex.selectbox('Size', ('mobile_sam', 'sam_b', 'sam_l'))
+        path = f'{size}.pt'
         model = SAM(path)
 
     if ver != 'sam':
-      classes = filter_by_vals(model.model.names, ex, 'Custom Classes')
+      if track:
+        tracker = (
+          ex.selectbox('Tracker', ['bytetrack', 'botsort', 'No track'])
+          if task != 'classify'
+          else None
+        )
+        tracker = tracker if tracker != 'No track' else None
+      classes = filter_by_vals(
+        coconames if ver == 'rtdetr' else model.model.names,
+        ex,
+        'Custom Classes',
+      )
       conf = ex.slider('Threshold', max_value=1.0, value=0.25)
       iou = ex.slider('IoU', max_value=1.0, value=0.5)
     else:

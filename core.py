@@ -4,6 +4,7 @@ from inspect import signature
 from pathlib import Path
 from typing import Generator
 
+import numpy as np
 import streamlit as st
 from attrs import asdict
 from numpy import ndarray
@@ -42,7 +43,7 @@ from custom_annotator import (
 )
 from model import Model, ModelInfo
 from utils import (
-  FisheyeRemoval,
+  FisheyeFlatten,
   canvas2draw,
   color_dict,
   exe_button,
@@ -135,6 +136,9 @@ class Annotator:
     d = json.load(open(path))
     model = Model(ModelInfo(**d['model']))
     config = from_plain(d['config'])
+    preprocessors = d['preprocessors']
+    if 'FisheyeFlatten' in preprocessors:
+      model.preprocessors.append(FisheyeFlatten(d['reso']))
     anns = {i: all_class[i](**config[i]) for i in config}
     return cls(model, anns)
 
@@ -198,10 +202,13 @@ class Annotator:
         background = Image.open(background).resize(reso)
       ex.write('**Notes:** Track & line counts only work on native run')
 
+    preprocessors = []
     ex0 = sb.expander('Experimental Features')
     if ex0.toggle('Fisheye Flatten'):
-      unfish = FisheyeRemoval(reso)
-      model.preprocessors.append(unfish)
+      flattener = FisheyeFlatten(reso)
+      model.preprocessors.append(flattener)
+      preprocessors.append('FisheyeFlatten')
+      background = Image.fromarray(flattener(np.array(background)))
 
     names = model.names
     task = model.task
@@ -319,6 +326,8 @@ class Annotator:
           v['reso'] = reso
 
     export = {
+      'reso': reso,
+      'preprocessors': preprocessors,
       'config': to_plain(config_plain),
       'model': asdict(model.info),
     }

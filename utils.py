@@ -39,8 +39,12 @@ camera_matrix = np.load('fisheye/camera_matrix.npy')
 dist_coeffs = np.load('fisheye/dist_coeffs.npy')
 
 
-class FisheyeRemoval:
-  def __init__(self, reso: tuple[int, int] = (640, 480)):
+class FisheyeFlatten:
+  def __init__(
+    self,
+    reso: tuple[int, int],
+    aspect_ratio: float = 16 / 9,
+  ):
     w, h = reso
     s = min(w, h)
     d = abs(w - h) // 2
@@ -52,6 +56,16 @@ class FisheyeRemoval:
     right, top, new_w, new_h = roi
     bottom = top + new_h
     left = right + new_w
+
+    if new_w / new_h > aspect_ratio:
+      spare = (new_w - int(new_h * aspect_ratio)) // 2
+      left += spare
+      right -= spare
+    else:
+      spare = (new_h - int(new_w / aspect_ratio)) // 2
+      top += spare
+      bottom -= spare
+
     self.crop = slice(top, bottom), slice(right, left)
     self.slic = (
       (slice(None), slice(None))
