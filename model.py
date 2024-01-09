@@ -107,6 +107,7 @@ class Model:
           names = model.names
       model = model.predict if tracker is None else model.track
 
+    names = names or coconames
     self.names = names
     self.task = task
     self.tracker = tracker

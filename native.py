@@ -17,13 +17,12 @@ def app(source=0, config='config.json', saveto=None):
       imshow('', f)
       if waitKey(1) & 0xFF == ord('q'):
         break
+    destroyAllWindows()
   else:
     writer = WriteGear(output=saveto)
     for f, _ in gen:
       writer.write(f)
     writer.close()
-
-  destroyAllWindows()
 
 
 if __name__ == '__main__':
