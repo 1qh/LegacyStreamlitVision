@@ -43,7 +43,7 @@ class FisheyeFlatten:
   def __init__(
     self,
     reso: tuple[int, int],
-    aspect_ratio: float = 16 / 9,
+    aspect_ratio: float | None = 16 / 9,
   ):
     w, h = reso
     s = min(w, h)
@@ -53,20 +53,21 @@ class FisheyeFlatten:
     self.new_camera_matrix, roi = getOptimalNewCameraMatrix(
       camera_matrix, dist_coeffs, (s, s), 1, (s, s)
     )
-    right, top, new_w, new_h = roi
+    left, top, new_w, new_h = roi
     bottom = top + new_h
-    left = right + new_w
+    right = left + new_w
 
-    if new_w / new_h > aspect_ratio:
-      spare = (new_w - int(new_h * aspect_ratio)) // 2
-      left += spare
-      right -= spare
-    else:
-      spare = (new_h - int(new_w / aspect_ratio)) // 2
-      top += spare
-      bottom -= spare
+    if aspect_ratio:
+      if new_w / new_h > aspect_ratio:
+        spare = (new_w - int(new_h * aspect_ratio)) // 2
+        left += spare
+        right -= spare
+      else:
+        spare = (new_h - int(new_w / aspect_ratio)) // 2
+        top += spare
+        bottom -= spare
 
-    self.crop = slice(top, bottom), slice(right, left)
+    self.crop = slice(top, bottom), slice(left, right)
     self.slic = (
       (slice(None), slice(None))
       if w == h
