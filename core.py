@@ -205,7 +205,14 @@ class Annotator:
     preprocessors = []
     ex0 = sb.expander('Experimental Features')
     if ex0.toggle('Fisheye Flatten'):
-      flattener = FisheyeFlatten(reso)
+      aspect_ratio = 1
+      if ex0.toggle('Custom aspect ratio'):
+        c1, c2 = ex0.columns(2)
+        w = c1.number_input('Width', 1, 16, 16, 1)
+        h = c2.number_input('Height', 1, 16, 9, 1)
+        aspect_ratio = w / h
+
+      flattener = FisheyeFlatten(reso, aspect_ratio)
       model.preprocessors.append(flattener)
       preprocessors.append('FisheyeFlatten')
       background = Image.fromarray(flattener(np.array(background)))

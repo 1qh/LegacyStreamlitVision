@@ -18,9 +18,9 @@ pip install -i https://download.pytorch.org/whl/cpu torch torchvision
 pip install -r requirements.txt
 ```
 
-| LightningAI                | Streamlit              |
-| -------------------------- | ---------------------- |
-| `lightning run app app.py` | `streamlit run app.py` |
+| Streamlit (default)    | LightningAI (require install) |
+| ---------------------- | ----------------------------- |
+| `streamlit run app.py` | `lightning run app app.py`    |
 
 #### Run in docker
 
@@ -30,7 +30,7 @@ docker-compose up
 
 ## Features
 
-- Run locally on [LightningAI](https://github.com/lightning-ai/lightning) / [Streamlit](https://github.com/streamlit/streamlit)
+- Run locally on [Streamlit](https://github.com/streamlit/streamlit) / [LightningAI](https://github.com/lightning-ai/lightning) web UI
 
   - Model
 
@@ -95,7 +95,7 @@ Camera (`/dev/video0`) & native run (`cv2.imshow()`) is not configured to run in
 #### Supported models:
 
 - [x] All YOLOv8 models (Detect, Segment, Pose, Classify)
-  - [x] With tracking
+  - [x] With BoT-SORT / ByteTrack object tracking
 
 Object detection:
 
@@ -103,7 +103,7 @@ Object detection:
 - [x] YOLO-NAS
 - [x] YOLOv5
   - [x] new v5u models
-  - [x] original v5 models
+  - [x] legacy v5 models
 - [x] YOLOv3
 
 Instance Segmentation

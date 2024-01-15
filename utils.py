@@ -43,7 +43,7 @@ class FisheyeFlatten:
   def __init__(
     self,
     reso: tuple[int, int],
-    aspect_ratio: float | None = 16 / 9,
+    aspect_ratio: float | None = 1.0,
   ):
     w, h = reso
     s = min(w, h)
