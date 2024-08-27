@@ -1,11 +1,8 @@
-from contextlib import suppress
-from pathlib import Path
 from shutil import which
 
 import streamlit as st
 from av import VideoFrame
 from cv2 import VideoCapture, VideoWriter_fourcc
-from psutil import ZombieProcess, process_iter
 from streamlit import session_state
 from streamlit import sidebar as sb
 from streamlit_webrtc import webrtc_streamer
@@ -156,32 +153,5 @@ def main(state):
     else:
       sb.warning('Please upload image/video')
 
-
-try:
-  from lightning.app import LightningApp, LightningFlow
-  from lightning.app.frontend import StreamlitFrontend
-
-  class App(LightningFlow):
-    def configure_layout(self):
-      return StreamlitFrontend(render_fn=main)
-
-    def run(self):
-      pass
-
-  lit = LightningApp(App())
-
-  running_apps = []
-  for p in process_iter():
-    with suppress(ZombieProcess):
-      running_apps.append(p.cmdline())
-
-  running_apps = [i for i in running_apps if 'run' in i]
-  this_process = next(p for p in running_apps if any(Path(__file__).stem in a for a in p))
-
-  if 'app' not in this_process:
-    main('')
-
-except ImportError:
-  pass
 
 main('')

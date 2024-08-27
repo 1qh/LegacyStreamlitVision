@@ -213,9 +213,7 @@ class Model:
             try:
               model = NAS(path)
             except FileNotFoundError:
-              st.warning(
-                'You might want to go to https://docs.ultralytics.com/models to download the weights first.'
-              )
+              st.warning('You might want to go to https://docs.ultralytics.com/models to download the weights first.')
           else:
             model = YOLO(path)
             task = model.overrides['task']
@@ -239,11 +237,7 @@ class Model:
 
     if ver != 'sam':
       if track:
-        tracker = (
-          ex.selectbox('Tracker', ['bytetrack', 'botsort', 'No track'])
-          if task != 'classify'
-          else None
-        )
+        tracker = ex.selectbox('Tracker', ['bytetrack', 'botsort', 'No track']) if task != 'classify' else None
         tracker = tracker if tracker != 'No track' else None
       classes = filter_by_vals(
         coconames if ver == 'rtdetr' else model.model.names,

@@ -1,8 +1,4 @@
-# Computer Vision Web UI
-
-## Setup
-
-#### Local environment
+## Local setup
 
 <details><summary>Note</summary>
 
@@ -16,13 +12,10 @@ pip install -i https://download.pytorch.org/whl/cpu torch torchvision
 
 ```
 pip install -r requirements.txt
+streamlit run app.py
 ```
 
-| Streamlit (default)    | LightningAI (require install) |
-| ---------------------- | ----------------------------- |
-| `streamlit run app.py` | `lightning run app app.py`    |
-
-#### Run in docker
+or run in docker
 
 ```sh
 docker-compose up
@@ -30,7 +23,7 @@ docker-compose up
 
 ## Features
 
-- Run locally on [Streamlit](https://github.com/streamlit/streamlit) / [LightningAI](https://github.com/lightning-ai/lightning) web UI
+- Run locally on web UI
 
   - Model
 
@@ -83,7 +76,7 @@ docker-compose up
 
 - **PRODUCTION READY**
 
-  - Save drawed visual elements & settings in JSON
+  - Save drawn visual elements & settings in JSON
   - Run inference with OpenCV standalone from saved JSON
 
 <details><summary>Note</summary>

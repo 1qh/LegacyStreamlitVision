@@ -316,9 +316,7 @@ class Annotator:
           ex.subheader('Classes')
           all_colors = color_dict.keys()
           color_names = (
-            ex.multiselect(' ', all_colors, ['black', 'white'])
-            if ex.toggle('Custom colors')
-            else all_colors
+            ex.multiselect(' ', all_colors, ['black', 'white']) if ex.toggle('Custom colors') else all_colors
           )
           if len(color_names) > 0:
             clf = ColorClassifier(color_names)

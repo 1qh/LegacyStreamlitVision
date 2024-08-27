@@ -1,3 +1,32 @@
 {
-  "ruff.format.args": ["--config=ruff.toml"]
+  "ruff.format.args": ["--config=ruff.toml"],
+  "cSpell.words": [
+    "argmax",
+    "argmin",
+    "astype",
+    "bincount",
+    "botsort",
+    "bytetrack",
+    "detr",
+    "dtype",
+    "ffprobe",
+    "fourcc",
+    "fromarray",
+    "gmtime",
+    "imshow",
+    "kmeans",
+    "ndarray",
+    "newaxis",
+    "reso",
+    "resos",
+    "rtdetr",
+    "selectbox",
+    "streamlit",
+    "torchvision",
+    "ultralytics",
+    "unsnake",
+    "webrtc",
+    "xyxy",
+    "yolo"
+  ]
 }

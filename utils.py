@@ -50,9 +50,7 @@ class FisheyeFlatten:
     d = abs(w - h) // 2
     self.camera_matrix = camera_matrix
     self.dist_coeffs = dist_coeffs
-    self.new_camera_matrix, roi = getOptimalNewCameraMatrix(
-      camera_matrix, dist_coeffs, (s, s), 1, (s, s)
-    )
+    self.new_camera_matrix, roi = getOptimalNewCameraMatrix(camera_matrix, dist_coeffs, (s, s), 1, (s, s))
     left, top, new_w, new_h = roi
     bottom = top + new_h
     right = left + new_w
@@ -132,10 +130,7 @@ class Draw:
         for i in d
         if i['type'] == 'line'
       ],
-      zones=[
-        [[x[1], x[2]] for x in k]
-        for k in [j[:-1] for j in [i['path'] for i in d if i['type'] == 'path']]
-      ]
+      zones=[[[x[1], x[2]] for x in k] for k in [j[:-1] for j in [i['path'] for i in d if i['type'] == 'path']]]
       + [
         [
           [i['left'], i['top']],
@@ -170,7 +165,7 @@ def maxcam() -> tuple[int, int]:
 
 
 def plur(n: int, s: str) -> str:
-  return f"{n} {s}{'s'[:n^1]}" if n else ''
+  return f"{n} {s}{'s'[: n ^ 1]}" if n else ''
 
 
 def rgb2hex(rgb: tuple[int, int, int]) -> str:
